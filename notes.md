@@ -243,3 +243,19 @@ JSON 28개 = 화면 28개
 | 다섯째 · 글자 | 예산 abc | 칸에 글자가 아예 들어가지 않음 (숫자 칸) | 아니오 | 없음 — 화면 입력 단계에서 막혀 실제 조건으로 적용되지 않음 |
 
 발견 — 음수 예산은 입력 가능하고 후보 0개로 처리된다. 「예산은 0보다 커야 합니다」 같은 입력 검증을 명세에 추가할 만하다.
+
+## M15 측정 계획서
+
+event-naming 스킬 확인 완료
+
+이벤트 계획
+- apply_filter : 조건 적용
+- get_recommendation : 추천 결과 또는 실패 안내 표시
+- select_item : 원래 화면 보기 클릭
+
+성공 행동
+- item_list_name = ai_recommendation 인 select_item
+- 주요 이벤트로 표시 : 예
+
+더 해보기
+- get_recommendation의 result_status를 success / unverified / error / no_candidates 로 구분
