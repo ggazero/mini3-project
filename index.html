@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>방탈출 테마 비교 도우미</title>
+  <style>
+    :root {
+      --bg: #f6f6f4;
+      --card: #ffffff;
+      --text: #1f1f1f;
+      --muted: #6b6b6b;
+      --line: #e3e3de;
+      --accent: #2f5bd3;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #161616;
+        --card: #212121;
+        --text: #ececec;
+        --muted: #a0a0a0;
+        --line: #333333;
+        --accent: #8aa9ff;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 48px; }
+    h1 { margin: 0 0 4px; font-size: 1.6rem; }
+    #count { margin: 0 0 24px; color: var(--muted); }
+    #list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+    .card h2 { margin: 0; font-size: 1.05rem; word-break: keep-all; overflow-wrap: anywhere; }
+    .meta { margin: 0; color: var(--muted); font-size: 0.95rem; }
+    .card a { margin-top: auto; color: var(--accent); font-weight: 600; text-decoration: none; }
+    .card a:hover { text-decoration: underline; }
+    #error { color: #c0392b; }
+    .sort { display: flex; gap: 8px; margin: 0 0 16px; }
+    .sort button, .filter button {
+      padding: 6px 12px;
+      font: inherit;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .sort button:hover, .filter button:hover { border-color: var(--accent); }
+    .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 12px; }
+    .filter label { display: flex; align-items: center; gap: 6px; }
+    .filter input {
+      width: 110px;
+      padding: 6px 8px;
+      font: inherit;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    #empty {
+      padding: 16px;
+      background: var(--card);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>방탈출 테마 비교 도우미</h1>
+    <p id="count">불러오는 중…</p>
+    <div class="filter">
+      <label>최대 예산(원) <input type="number" id="max-price" min="0" step="1000"></label>
+      <label>최소 난이도 <input type="number" id="min-difficulty" min="0" step="0.1"></label>
+      <button type="button" id="apply">적용</button>
+    </div>
+    <div class="sort">
+      <button type="button" id="sort-asc">가격 낮은 순</button>
+      <button type="button" id="sort-desc">가격 높은 순</button>
+    </div>
+    <ul id="list"></ul>
+    <p id="empty" hidden></p>
+    <p id="error" hidden></p>
+  </main>
+
+  <script>
+    // data.json 의 difficulty 는 모두 소수 한 자리(예: 3.0, 3.5).
+    // JS 는 3.0 을 3 으로 읽으므로, 정수일 때만 ".0" 을 붙여 원래 모양대로 보여준다.
+    function formatDifficulty(v) {
+      return Number.isInteger(v) ? v.toFixed(1) : String(v);
+    }
+
+    function makeCard(item) {
+      const li = document.createElement("li");
+      li.className = "card";
+
+      const name = document.createElement("h2");
+      name.textContent = item.name;
+
+      const price = document.createElement("p");
+      price.className = "meta";
+      price.textContent = "가격 " + item.price;
+
+      const difficulty = document.createElement("p");
+      difficulty.className = "meta";
+      difficulty.textContent = "난이도 " + formatDifficulty(item.difficulty);
+
+      const link = document.createElement("a");
+      link.href = item.detail_url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = "원래 화면 보기";
+
+      li.append(name, price, difficulty, link);
+      return li;
+    }
+
+    fetch("data/data.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("data.json 을 불러오지 못했습니다 (" + res.status + ")");
+        return res.json();
+      })
+      .then((items) => {
+        const count = document.getElementById("count");
+        const list = document.getElementById("list");
+        const empty = document.getElementById("empty");
+
+        // 지금 화면에 보이는 카드들. 원본 items 는 건드리지 않는다.
+        let current = items.slice();
+
+        function render(shown) {
+          current = shown;
+          count.textContent = "조건에 맞는 " + shown.length + "개 / 전체 " + items.length + "개";
+          list.replaceChildren(...shown.map(makeCard));
+          list.hidden = shown.length === 0;
+        }
+
+        // 화면에서만 순서를 바꾼다. 원본 items 는 건드리지 않고 복사본을 정렬한다.
+        function renderSorted(direction) {
+          const sorted = current.slice().sort((a, b) => direction * (Number(a.price) - Number(b.price)));
+          render(sorted);
+        }
+        document.getElementById("sort-asc").addEventListener("click", () => renderSorted(1));
+        document.getElementById("sort-desc").addEventListener("click", () => renderSorted(-1));
+
+        // 칸이 비어 있으면 null (= 그 조건은 걸지 않음)
+        function readNumber(id) {
+          const raw = document.getElementById(id).value.trim();
+          return raw === "" ? null : Number(raw);
+        }
+        const withinBudget = (item, maxPrice) => maxPrice === null || Number(item.price) <= maxPrice;
+        const hardEnough = (item, minDiff) => minDiff === null || Number(item.difficulty) >= minDiff;
+        const byPrice = (a, b) => Number(a.price) - Number(b.price);
+
+        // 맞는 카드가 없을 때: 조건은 그대로 두고, 한 조건만 풀면 어떻게 되는지 data.json 으로 계산해 알려준다.
+        function emptyMessage(maxPrice, minDiff) {
+          let budgetPart;
+          const byDiffOnly = items.filter((it) => hardEnough(it, minDiff)).sort(byPrice);
+          if (byDiffOnly.length === 0) {
+            budgetPart = "난이도 " + formatDifficulty(minDiff) + " 이상인 테마는 예산을 올려도 없고";
+          } else {
+            const c = byDiffOnly[0];
+            budgetPart = "예산만 올리면 가장 싼 후보는 " + c.name + "(가격 " + c.price + ")이고";
+          }
+
+          let diffPart;
+          const byBudgetOnly = items.filter((it) => withinBudget(it, maxPrice));
+          if (byBudgetOnly.length === 0) {
+            diffPart = "최소 난이도를 낮춰도 가격 " + maxPrice + " 이하인 테마는 없습니다.";
+          } else {
+            // 예산 안에 있는 테마 중 가장 높은 난이도까지만 낮추면 결과가 생긴다.
+            const newMin = Math.max(...byBudgetOnly.map((it) => Number(it.difficulty)));
+            const n = byBudgetOnly.filter((it) => Number(it.difficulty) >= newMin).length;
+            diffPart = "최소 난이도만 " + formatDifficulty(newMin) + "(으)로 낮추면 " + n + "개가 됩니다.";
+          }
+
+          return "조건에 맞는 테마가 없습니다. " + budgetPart + ", " + diffPart;
+        }
+
+        document.getElementById("apply").addEventListener("click", () => {
+          const maxPrice = readNumber("max-price");
+          const minDiff = readNumber("min-difficulty");
+          const matched = items
+            .filter((it) => withinBudget(it, maxPrice) && hardEnough(it, minDiff))
+            .sort(byPrice);
+          render(matched);
+          empty.hidden = matched.length > 0;
+          empty.textContent = matched.length > 0 ? "" : emptyMessage(maxPrice, minDiff);
+        });
+
+        render(current);
+      })
+      .catch((err) => {
+        document.getElementById("count").textContent = "";
+        const box = document.getElementById("error");
+        box.textContent = err.message;
+        box.hidden = false;
+      });
+  </script>
+</body>
+</html>
