@@ -21,6 +21,7 @@
       --field-bg: #f3f6fc;
       --field-line: #c9d3e8;
       --focus-ring: rgba(47, 91, 211, 0.3);
+      --evidence-bg: #ecefe9;
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -39,6 +40,7 @@
         --field-bg: #1b2130;
         --field-line: #3a4560;
         --focus-ring: rgba(138, 169, 255, 0.4);
+        --evidence-bg: #1d1d1d;
       }
     }
     * { box-sizing: border-box; }
@@ -132,6 +134,29 @@
       font-weight: 600;
     }
     .filter button:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    /* 근거 영역: 카드 목록과 구분되도록 위쪽 굵은 선 + 다른 배경 */
+    .evidence {
+      margin-top: 48px;
+      padding: 24px 16px;
+      background: var(--evidence-bg);
+      border-top: 3px solid var(--selected);
+      border-radius: 0 0 10px 10px;
+    }
+    .evidence h2 { margin: 0 0 16px; font-size: 1.25rem; }
+    .evidence figure { margin: 0 0 28px; }
+    .evidence img {
+      display: block;
+      width: 100%;
+      max-width: 900px;
+      height: auto;
+      background: #ffffff; /* 그림 배경이 흰색이라 어두운 화면에서도 흰 바탕 위에 둔다 */
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .evidence figcaption { margin-top: 10px; max-width: 900px; }
+    .evidence-notes { margin: 0; max-width: 900px; }
+    .evidence-notes dt { font-weight: 700; }
+    .evidence-notes dd { margin: 2px 0 12px; color: var(--muted); }
     #empty {
       padding: 16px;
       background: var(--card);
@@ -157,6 +182,35 @@
     <ul id="list"></ul>
     <p id="empty" hidden></p>
     <p id="error" hidden></p>
+
+    <section class="evidence" aria-labelledby="evidence-title">
+      <h2 id="evidence-title">근거</h2>
+
+      <figure>
+        <img src="charts/hist.png" width="1200" height="750" loading="lazy"
+             alt="가격 분포 히스토그램 (n = 28). 25,000~27,000원 2개, 27,000~29,000원 8개, 29,000~31,000원 6개, 31,000~33,000원 4개, 33,000~35,000원 8개.">
+        <figcaption>
+          <strong>그림 1 관찰:</strong>
+          27,000~29,000원과 33,000~35,000원 구간이 각각 8개로 공동 최다였다.
+        </figcaption>
+      </figure>
+
+      <figure>
+        <img src="charts/by_category.png" width="1800" height="900" loading="lazy"
+             alt="난이도별 평균 가격 막대그래프 (n = 28). 가로축은 difficulty 1.7부터 4.1까지, 세로축은 평균 가격(원).">
+        <figcaption>
+          <strong>그림 2 관찰:</strong>
+          최대 가격 35,000원은 difficulty 2.2, 2.5, 3.0, 3.1 그룹에 포함되어 있고, difficulty 3.0은 평균 30,000원과 중앙값 28,000원으로 달랐다.
+        </figcaption>
+      </figure>
+
+      <dl class="evidence-notes">
+        <dt>한계</dt>
+        <dd>공개 목록 페이지에서 확인 가능한 30행만 수집했고, price와 difficulty가 비어 있는 2행을 제거해 28개를 분석했다.</dd>
+        <dt>출처</dt>
+        <dd>방도장 공개 목록 · 2026-09-28 수집 · 원본 30개 / 분석 28개</dd>
+      </dl>
+    </section>
   </main>
 
   <script>
