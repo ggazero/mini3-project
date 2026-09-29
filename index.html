@@ -6,41 +6,60 @@
   <title>방탈출 테마 비교 도우미</title>
   <style>
     :root {
-      --bg: #f6f6f4;
+      --bg: #ffffff;
+      --surface: #f7f8fa;          /* 조건 · 근거처럼 한 덩어리로 묶는 영역 */
       --card: #ffffff;
-      --text: #1f1f1f;
-      --muted: #6b6b6b;
-      --line: #e3e3de;
+      --text: #1b1f24;
+      --muted: #5f6670;
+      --line: #e4e7eb;
+      --line-strong: #cfd4da;
       --accent: #2f5bd3;
-      --line-strong: #c8c8c2;
+      --primary: #2f5bd3;
+      --primary-hover: #2449ad;
+      --primary-soft: #eef2fc;
       --hover-bg: #f1f4fb;
       --selected: #2b3445;
       --selected-hover: #1c2230;
-      --primary: #2f5bd3;
-      --primary-hover: #2449ad;
-      --field-bg: #f3f6fc;
-      --field-line: #c9d3e8;
-      --focus-ring: rgba(47, 91, 211, 0.3);
-      --evidence-bg: #ecefe9;
+      --field-bg: #ffffff;
+      --field-line: #cfd6e3;
+      --focus-ring: rgba(47, 91, 211, 0.28);
+      --shadow: 0 1px 2px rgba(16, 24, 40, 0.05);
+      --notice-bg: #fff8e6;        /* 후보 없음 · 다시 눌러 주세요 */
+      --notice-line: #f0d48a;
+      --notice-text: #6b4e00;
+      --danger-bg: #fdecec;        /* 예산 오류 · 불러오기 오류 */
+      --danger-line: #f1b5b5;
+      --danger-text: #a4262c;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --gap: 24px;                 /* 영역 사이 간격 */
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #161616;
-        --card: #212121;
-        --text: #ececec;
-        --muted: #a0a0a0;
-        --line: #333333;
+        --bg: #131416;
+        --surface: #1b1d20;
+        --card: #202226;
+        --text: #eceef0;
+        --muted: #a3a9b1;
+        --line: #30333a;
+        --line-strong: #454a52;
         --accent: #8aa9ff;
-        --line-strong: #4a4a4a;
-        --hover-bg: #2a2f3b;
-        --selected: #5b6b8c;
-        --selected-hover: #6b7ca0;
         --primary: #3d63d6;
         --primary-hover: #4d72e3;
-        --field-bg: #1b2130;
-        --field-line: #3a4560;
-        --focus-ring: rgba(138, 169, 255, 0.4);
-        --evidence-bg: #1d1d1d;
+        --primary-soft: #1f2a44;
+        --hover-bg: #262c38;
+        --selected: #5b6b8c;
+        --selected-hover: #6b7ca0;
+        --field-bg: #16181b;
+        --field-line: #3a4252;
+        --focus-ring: rgba(138, 169, 255, 0.38);
+        --shadow: none;
+        --notice-bg: #2b2413;
+        --notice-line: #5c4a1a;
+        --notice-text: #f1d58a;
+        --danger-bg: #2e1a1b;
+        --danger-line: #6a2e31;
+        --danger-text: #ff9c9c;
       }
     }
     * { box-sizing: border-box; }
@@ -49,11 +68,160 @@
       background: var(--bg);
       color: var(--text);
       font-family: system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
-      line-height: 1.5;
+      line-height: 1.55;
+      -webkit-text-size-adjust: 100%;
     }
-    main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 48px; }
-    h1 { margin: 0 0 4px; font-size: 1.6rem; }
-    #count { margin: 0 0 24px; color: var(--muted); }
+    main { max-width: 1080px; margin: 0 auto; padding: 40px 16px 56px; }
+
+    /* 상단 제목 */
+    .page-head { margin: 0 0 var(--gap); }
+    .eyebrow { margin: 0 0 6px; color: var(--accent); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.02em; }
+    h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem); line-height: 1.25; letter-spacing: -0.01em; }
+    .lead { margin: 0; max-width: 560px; color: var(--muted); }
+
+    /* 공통 영역(패널) */
+    .panel {
+      margin: 0 0 var(--gap);
+      padding: 16px 20px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .panel-title { margin: 0 0 10px; font-size: 1rem; font-weight: 700; }
+
+    /* 버튼 공통 */
+    button { font: inherit; }
+    .filter button, .recommend button, .sort button {
+      min-height: 40px;
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s;
+    }
+    .filter button:focus-visible, .recommend button:focus-visible, .sort button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    /* 조건 입력: 칸 두 개 + [적용](보조 단추) */
+    .filter {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 200px)) auto;
+      justify-content: start;
+      align-items: end;
+      gap: 12px;
+    }
+    .filter label { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .field-label { color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+    .filter input {
+      width: 100%;
+      min-width: 0;
+      min-height: 40px;
+      padding: 8px 12px;
+      font: inherit;
+      color: var(--text);
+      background: var(--field-bg);
+      border: 1px solid var(--field-line);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .filter input:hover { border-color: var(--accent); }
+    .filter input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .filter button {
+      color: var(--primary);
+      background: var(--card);
+      border: 1px solid var(--line-strong);
+      font-weight: 600;
+    }
+    .filter button:hover { border-color: var(--primary); background: var(--hover-bg); }
+
+    /* AI 추천: 주 단추 + 결과 카드 */
+    .recommend { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    .recommend button {
+      color: #ffffff;
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      font-weight: 700;
+    }
+    .recommend button:hover:not(:disabled) { background: var(--primary-hover); border-color: var(--primary-hover); }
+    .recommend button:disabled { opacity: 0.65; cursor: wait; }
+    #recommend-result {
+      margin-top: 14px;
+      padding: 16px 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+    }
+    #recommend-result:has(.pick-name)::before {
+      content: "AI 추천";
+      display: block;
+      margin-bottom: 4px;
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+    #recommend-result p { margin: 0; }
+    #recommend-result .pick-name { margin-bottom: 8px; font-size: 1.15rem; font-weight: 700; line-height: 1.35; }
+    #recommend-result .pick-name ~ p { position: relative; padding-left: 14px; color: var(--muted); }
+    #recommend-result .pick-name ~ p::before { content: "·"; position: absolute; left: 2px; font-weight: 700; }
+    /* 추천 대신 안내만 뜬 경우 (잠시 뒤 다시 · 확인하지 못함) */
+    #recommend-result:not(:has(.pick-name)) {
+      color: var(--notice-text);
+      background: var(--notice-bg);
+      border-color: var(--notice-line);
+      border-left-color: var(--notice-line);
+      box-shadow: none;
+    }
+
+    /* 안내 문구 */
+    #budget-error, #error, #empty {
+      margin: 12px 0 0;
+      padding: 12px 16px;
+      border: 1px solid;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+    }
+    #budget-error, #error { color: var(--danger-text); background: var(--danger-bg); border-color: var(--danger-line); }
+    #empty { margin: 0; color: var(--notice-text); background: var(--notice-bg); border-color: var(--notice-line); font-weight: 500; }
+    [hidden] { display: none !important; }
+
+    /* 결과 머리줄: 개수 + 정렬 */
+    .results-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 0 16px;
+    }
+    #count { margin: 0; font-weight: 700; }
+    .sort { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .sort button {
+      min-height: 36px;
+      padding: 6px 12px;
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--line-strong);
+      font-size: 0.92rem;
+    }
+    .sort button:hover { border-color: var(--accent); background: var(--hover-bg); }
+    .sort button[aria-pressed="true"] {
+      color: #ffffff;
+      background: var(--selected);
+      border-color: var(--selected);
+      font-weight: 600;
+    }
+    .sort button[aria-pressed="true"]::before { content: "✓ "; }
+    .sort button[aria-pressed="true"]:hover { background: var(--selected-hover); border-color: var(--selected-hover); }
+    .sort-state { margin-left: 4px; color: var(--muted); font-size: 0.78rem; opacity: 0.85; }
+
+    /* 테마 카드 */
     #list {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -65,121 +233,42 @@
     .card {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      padding: 16px;
+      gap: 6px;
+      padding: 18px;
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 10px;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
     }
-    .card h2 { margin: 0; font-size: 1.05rem; word-break: keep-all; overflow-wrap: anywhere; }
-    .meta { margin: 0; color: var(--muted); font-size: 0.95rem; }
-    .card a { margin-top: auto; color: var(--accent); font-weight: 600; text-decoration: none; }
+    .card h2 { margin: 0 0 4px; font-size: 1.02rem; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
+    .meta { margin: 0; color: var(--muted); font-size: 0.93rem; font-variant-numeric: tabular-nums; }
+    .card a {
+      margin-top: auto;
+      padding-top: 12px;
+      color: var(--accent);
+      font-size: 0.92rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-top: 1px solid var(--line);
+    }
+    .card a::after { content: " ↗"; }
     .card a:hover { text-decoration: underline; }
-    #error { color: #c0392b; }
-    #budget-error { margin: 0 0 12px; color: #c0392b; font-weight: 600; }
-    /* 버튼 공통 */
-    .sort button, .filter button {
-      padding: 6px 12px;
-      font: inherit;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
-    }
-    .sort button:focus-visible, .filter button:focus-visible {
-      outline: none;
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-
-    /* 가격 정렬: 선택 안 됨 = 흰 배경 + 테두리, 선택됨 = 진한 배경 + 흰 글자 + ✓ */
-    .sort { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
-    .sort button {
-      color: var(--text);
-      background: var(--card);
-      border: 1px solid var(--line-strong);
-    }
-    .sort button:hover { border-color: var(--accent); background: var(--hover-bg); }
-    .sort button[aria-pressed="true"] {
-      color: #ffffff;
-      background: var(--selected);
-      border-color: var(--selected);
-      font-weight: 600;
-    }
-    .sort button[aria-pressed="true"]::before { content: "✓ "; }
-    .sort button[aria-pressed="true"]:hover { background: var(--selected-hover); border-color: var(--selected-hover); }
-    .sort-state { color: var(--muted); font-size: 0.9rem; }
-
-    /* 조건 입력 */
-    .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 12px; }
-    .filter label { display: flex; align-items: center; gap: 6px; }
-    .filter input {
-      width: 110px;
-      padding: 6px 8px;
-      font: inherit;
-      color: var(--text);
-      background: var(--field-bg);
-      border: 1px solid var(--field-line);
-      border-radius: 6px;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .filter input:hover { border-color: var(--accent); }
-    .filter input:focus {
-      outline: none;
-      background: var(--card);
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px var(--focus-ring);
-    }
-    .filter button {
-      color: #ffffff;
-      background: var(--primary);
-      border: 1px solid var(--primary);
-      font-weight: 600;
-    }
-    .filter button:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
-    /* AI 추천 */
-    .recommend { margin: 0 0 16px; }
-    .recommend button {
-      padding: 6px 12px;
-      font: inherit;
-      font-weight: 600;
-      color: var(--primary);
-      background: var(--card);
-      border: 1px solid var(--primary);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.15s, box-shadow 0.15s;
-    }
-    .recommend button:hover:not(:disabled) { background: var(--hover-bg); }
-    .recommend button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
-    .recommend button:disabled { opacity: 0.6; cursor: wait; }
-    #recommend-result {
-      margin-top: 10px;
-      padding: 12px 16px;
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-left: 4px solid var(--primary);
-      border-radius: 8px;
-    }
-    #recommend-result p { margin: 0; }
-    #recommend-result .pick-name { font-weight: 700; margin-bottom: 4px; }
-    .card.is-pick { border: 2px solid var(--primary); }
+    .card a:focus-visible { outline: none; border-radius: 4px; box-shadow: 0 0 0 3px var(--focus-ring); }
+    .card.is-pick { border: 2px solid var(--primary); padding: 17px; background: var(--primary-soft); }
     .pick-badge {
       align-self: flex-start;
-      padding: 1px 8px;
-      font-size: 0.8rem;
+      margin-bottom: 2px;
+      padding: 2px 10px;
+      font-size: 0.78rem;
       font-weight: 700;
       color: #ffffff;
       background: var(--primary);
       border-radius: 999px;
     }
-    /* 근거 영역: 카드 목록과 구분되도록 위쪽 굵은 선 + 다른 배경 */
-    .evidence {
-      margin-top: 48px;
-      padding: 24px 16px;
-      background: var(--evidence-bg);
-      border-top: 3px solid var(--selected);
-      border-radius: 0 0 10px 10px;
-    }
-    .evidence h2 { margin: 0 0 16px; font-size: 1.25rem; }
+
+    /* 근거 영역 */
+    .evidence { margin: 48px 0 0; padding: 24px 20px; }
+    .evidence h2 { margin: 0 0 16px; font-size: 1.15rem; }
     .evidence figure { margin: 0 0 28px; }
     .evidence img {
       display: block;
@@ -188,44 +277,59 @@
       height: auto;
       background: #ffffff; /* 그림 배경이 흰색이라 어두운 화면에서도 흰 바탕 위에 둔다 */
       border: 1px solid var(--line);
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
     }
     .evidence figcaption { margin-top: 10px; max-width: 900px; }
     .evidence-notes { margin: 0; max-width: 900px; }
     .evidence-notes dt { font-weight: 700; }
     .evidence-notes dd { margin: 2px 0 12px; color: var(--muted); }
-    #empty {
-      padding: 16px;
-      background: var(--card);
-      border: 1px dashed var(--line);
-      border-radius: 10px;
+
+    /* 휴대폰: 칸과 단추를 한 줄씩 꽉 차게 */
+    @media (max-width: 600px) {
+      main { padding: 28px 16px 40px; }
+      .panel { padding: 16px; }
+      .filter { grid-template-columns: minmax(0, 1fr); }
+      .filter button, .recommend button { width: 100%; }
+      .results-head { align-items: flex-start; flex-direction: column; }
+      #list { grid-template-columns: minmax(0, 1fr); }
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>방탈출 테마 비교 도우미</h1>
-    <p id="count">불러오는 중…</p>
-    <div class="filter">
-      <label>최대 예산(원) <input type="number" id="max-price" min="0" step="1000"></label>
-      <label>최소 난이도 <input type="number" id="min-difficulty" min="0" step="0.1"></label>
-      <button type="button" id="apply">적용</button>
-    </div>
-    <p id="budget-error" role="alert" hidden>예산은 0보다 커야 합니다</p>
-    <div class="recommend">
-      <button type="button" id="recommend-btn">이 조건으로 추천받기</button>
-      <div id="recommend-result" aria-live="polite" hidden></div>
-    </div>
-    <div class="sort" role="group" aria-label="가격 정렬">
-      <button type="button" id="sort-asc" aria-pressed="false">가격 낮은 순</button>
-      <button type="button" id="sort-desc" aria-pressed="false">가격 높은 순</button>
-      <span class="sort-state" id="sort-state">지금: data.json 순서</span>
+    <header class="page-head">
+      <p class="eyebrow">방도장 공개 목록 기반</p>
+      <h1>방탈출 테마 비교 도우미</h1>
+      <p class="lead">예산과 난이도로 테마를 거르고, 후보 중 하나를 AI에게 추천받아 보세요.</p>
+    </header>
+
+    <section class="panel conditions" aria-labelledby="conditions-title">
+      <h2 class="panel-title" id="conditions-title">조건</h2>
+      <div class="filter">
+        <label><span class="field-label">최대 예산(원)</span><input type="number" id="max-price" min="0" step="1000"></label>
+        <label><span class="field-label">최소 난이도</span><input type="number" id="min-difficulty" min="0" step="0.1"></label>
+        <button type="button" id="apply">적용</button>
+      </div>
+      <p id="budget-error" role="alert" hidden>예산은 0보다 커야 합니다</p>
+      <div class="recommend">
+        <button type="button" id="recommend-btn">이 조건으로 추천받기</button>
+        <div id="recommend-result" aria-live="polite" hidden></div>
+      </div>
+    </section>
+
+    <div class="results-head">
+      <p id="count">불러오는 중…</p>
+      <div class="sort" role="group" aria-label="가격 정렬">
+        <button type="button" id="sort-asc" aria-pressed="false">가격 낮은 순</button>
+        <button type="button" id="sort-desc" aria-pressed="false">가격 높은 순</button>
+        <span class="sort-state" id="sort-state">지금: data.json 순서</span>
+      </div>
     </div>
     <ul id="list"></ul>
     <p id="empty" hidden></p>
     <p id="error" hidden></p>
 
-    <section class="evidence" aria-labelledby="evidence-title">
+    <section class="panel evidence" aria-labelledby="evidence-title">
       <h2 id="evidence-title">근거</h2>
 
       <figure>
