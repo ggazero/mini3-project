@@ -12,6 +12,15 @@
       --muted: #6b6b6b;
       --line: #e3e3de;
       --accent: #2f5bd3;
+      --line-strong: #c8c8c2;
+      --hover-bg: #f1f4fb;
+      --selected: #2b3445;
+      --selected-hover: #1c2230;
+      --primary: #2f5bd3;
+      --primary-hover: #2449ad;
+      --field-bg: #f3f6fc;
+      --field-line: #c9d3e8;
+      --focus-ring: rgba(47, 91, 211, 0.3);
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -21,6 +30,15 @@
         --muted: #a0a0a0;
         --line: #333333;
         --accent: #8aa9ff;
+        --line-strong: #4a4a4a;
+        --hover-bg: #2a2f3b;
+        --selected: #5b6b8c;
+        --selected-hover: #6b7ca0;
+        --primary: #3d63d6;
+        --primary-hover: #4d72e3;
+        --field-bg: #1b2130;
+        --field-line: #3a4560;
+        --focus-ring: rgba(138, 169, 255, 0.4);
       }
     }
     * { box-sizing: border-box; }
@@ -56,17 +74,38 @@
     .card a { margin-top: auto; color: var(--accent); font-weight: 600; text-decoration: none; }
     .card a:hover { text-decoration: underline; }
     #error { color: #c0392b; }
-    .sort { display: flex; gap: 8px; margin: 0 0 16px; }
+    /* 버튼 공통 */
     .sort button, .filter button {
       padding: 6px 12px;
       font: inherit;
-      color: var(--text);
-      background: var(--card);
-      border: 1px solid var(--line);
       border-radius: 6px;
       cursor: pointer;
+      transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
     }
-    .sort button:hover, .filter button:hover { border-color: var(--accent); }
+    .sort button:focus-visible, .filter button:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+
+    /* 가격 정렬: 선택 안 됨 = 흰 배경 + 테두리, 선택됨 = 진한 배경 + 흰 글자 + ✓ */
+    .sort { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
+    .sort button {
+      color: var(--text);
+      background: var(--card);
+      border: 1px solid var(--line-strong);
+    }
+    .sort button:hover { border-color: var(--accent); background: var(--hover-bg); }
+    .sort button[aria-pressed="true"] {
+      color: #ffffff;
+      background: var(--selected);
+      border-color: var(--selected);
+      font-weight: 600;
+    }
+    .sort button[aria-pressed="true"]::before { content: "✓ "; }
+    .sort button[aria-pressed="true"]:hover { background: var(--selected-hover); border-color: var(--selected-hover); }
+    .sort-state { color: var(--muted); font-size: 0.9rem; }
+
+    /* 조건 입력 */
     .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 0 0 12px; }
     .filter label { display: flex; align-items: center; gap: 6px; }
     .filter input {
@@ -74,10 +113,25 @@
       padding: 6px 8px;
       font: inherit;
       color: var(--text);
-      background: var(--card);
-      border: 1px solid var(--line);
+      background: var(--field-bg);
+      border: 1px solid var(--field-line);
       border-radius: 6px;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
+    .filter input:hover { border-color: var(--accent); }
+    .filter input:focus {
+      outline: none;
+      background: var(--card);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+    }
+    .filter button {
+      color: #ffffff;
+      background: var(--primary);
+      border: 1px solid var(--primary);
+      font-weight: 600;
+    }
+    .filter button:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
     #empty {
       padding: 16px;
       background: var(--card);
@@ -95,9 +149,10 @@
       <label>최소 난이도 <input type="number" id="min-difficulty" min="0" step="0.1"></label>
       <button type="button" id="apply">적용</button>
     </div>
-    <div class="sort">
-      <button type="button" id="sort-asc">가격 낮은 순</button>
-      <button type="button" id="sort-desc">가격 높은 순</button>
+    <div class="sort" role="group" aria-label="가격 정렬">
+      <button type="button" id="sort-asc" aria-pressed="false">가격 낮은 순</button>
+      <button type="button" id="sort-desc" aria-pressed="false">가격 높은 순</button>
+      <span class="sort-state" id="sort-state">지금: data.json 순서</span>
     </div>
     <ul id="list"></ul>
     <p id="empty" hidden></p>
@@ -160,6 +215,15 @@
         function renderSorted(direction) {
           const sorted = current.slice().sort((a, b) => direction * (Number(a.price) - Number(b.price)));
           render(sorted);
+          showSortState(direction);
+        }
+
+        // 지금 화면이 어떤 순서인지 단추(aria-pressed)와 글자로 보여준다. 0 = data.json 순서
+        function showSortState(direction) {
+          document.getElementById("sort-asc").setAttribute("aria-pressed", String(direction === 1));
+          document.getElementById("sort-desc").setAttribute("aria-pressed", String(direction === -1));
+          document.getElementById("sort-state").textContent =
+            "지금: " + (direction === 1 ? "가격 낮은 순" : direction === -1 ? "가격 높은 순" : "data.json 순서");
         }
         document.getElementById("sort-asc").addEventListener("click", () => renderSorted(1));
         document.getElementById("sort-desc").addEventListener("click", () => renderSorted(-1));
@@ -198,16 +262,22 @@
           return "조건에 맞는 테마가 없습니다. " + budgetPart + ", " + diffPart;
         }
 
-        document.getElementById("apply").addEventListener("click", () => {
+        function applyFilter() {
           const maxPrice = readNumber("max-price");
           const minDiff = readNumber("min-difficulty");
           const matched = items
             .filter((it) => withinBudget(it, maxPrice) && hardEnough(it, minDiff))
             .sort(byPrice);
           render(matched);
+          showSortState(1); // 필터 결과는 항상 price 낮은 순
           empty.hidden = matched.length > 0;
           empty.textContent = matched.length > 0 ? "" : emptyMessage(maxPrice, minDiff);
-        });
+        }
+
+        document.getElementById("apply").addEventListener("click", applyFilter);
+        // 칸 값이 바뀌면 [적용] 을 누르지 않아도 바로 다시 거른다.
+        document.getElementById("max-price").addEventListener("input", applyFilter);
+        document.getElementById("min-difficulty").addEventListener("input", applyFilter);
 
         render(current);
       })
