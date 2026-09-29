@@ -68,6 +68,8 @@ const SYSTEM_INSTRUCTION = [
   "규칙:",
   "- name 은 후보 표의 name 을 한 글자도 바꾸지 말고 그대로 쓴다.",
   "- reasons 는 정확히 두 문장이다. 각 문장은 한국어 한 줄이고, 공백과 문장부호를 포함해 40자 이내로 짧게 쓴다.",
+  "- reasons 는 한국어로만 쓴다. price, difficulty, name 같은 영문 필드명은 쓰지 않는다.",
+  "- price 는 반드시 '가격', difficulty 는 반드시 '난이도'라고 쓴다. (예: '난이도 3.5로 최소 난이도에 가장 가깝습니다.')",
   "- 이유에 쓰는 숫자는 후보 표에 있는 price 와 difficulty 값만 쓴다. 후보 개수, 순위, 예산, 최소 난이도, 계산한 차이 값, 날짜 같은 다른 숫자는 쓰지 않는다.",
   "- 후보 표에 없는 테마, 지역, 장르, 후기, 인원, 시간 같은 정보는 절대 말하지 않는다.",
 ].join("\n");
@@ -82,7 +84,8 @@ const RESPONSE_SCHEMA = {
 };
 
 function buildInput(maxPrice, minDiff, candidates) {
-  const lines = candidates.map((c, i) => `${i + 1} | ${c.name} | ${c.price} | ${c.difficulty}`);
+  // difficulty 는 data.json 처럼 항상 소수 한 자리로 보여준다 (3 → 3.0). 비교 · 검증은 숫자 그대로 한다.
+  const lines = candidates.map((c, i) => `${i + 1} | ${c.name} | ${c.price} | ${c.difficulty.toFixed(1)}`);
   return [
     `최대 예산: ${maxPrice === null ? "조건 없음" : maxPrice}`,
     `최소 난이도: ${minDiff === null ? "조건 없음" : minDiff}`,
