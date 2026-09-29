@@ -134,6 +134,42 @@
       font-weight: 600;
     }
     .filter button:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+    /* AI 추천 */
+    .recommend { margin: 0 0 16px; }
+    .recommend button {
+      padding: 6px 12px;
+      font: inherit;
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--card);
+      border: 1px solid var(--primary);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.15s, box-shadow 0.15s;
+    }
+    .recommend button:hover:not(:disabled) { background: var(--hover-bg); }
+    .recommend button:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus-ring); }
+    .recommend button:disabled { opacity: 0.6; cursor: wait; }
+    #recommend-result {
+      margin-top: 10px;
+      padding: 12px 16px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-left: 4px solid var(--primary);
+      border-radius: 8px;
+    }
+    #recommend-result p { margin: 0; }
+    #recommend-result .pick-name { font-weight: 700; margin-bottom: 4px; }
+    .card.is-pick { border: 2px solid var(--primary); }
+    .pick-badge {
+      align-self: flex-start;
+      padding: 1px 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #ffffff;
+      background: var(--primary);
+      border-radius: 999px;
+    }
     /* 근거 영역: 카드 목록과 구분되도록 위쪽 굵은 선 + 다른 배경 */
     .evidence {
       margin-top: 48px;
@@ -173,6 +209,10 @@
       <label>최대 예산(원) <input type="number" id="max-price" min="0" step="1000"></label>
       <label>최소 난이도 <input type="number" id="min-difficulty" min="0" step="0.1"></label>
       <button type="button" id="apply">적용</button>
+    </div>
+    <div class="recommend">
+      <button type="button" id="recommend-btn">이 조건으로 추천받기</button>
+      <div id="recommend-result" aria-live="polite" hidden></div>
     </div>
     <div class="sort" role="group" aria-label="가격 정렬">
       <button type="button" id="sort-asc" aria-pressed="false">가격 낮은 순</button>
@@ -220,9 +260,19 @@
       return Number.isInteger(v) ? v.toFixed(1) : String(v);
     }
 
+    // AI 가 추천한(그리고 검증을 통과한) 테마 이름. 없으면 null
+    let recommendedName = null;
+
     function makeCard(item) {
       const li = document.createElement("li");
       li.className = "card";
+      if (item.name === recommendedName) {
+        li.classList.add("is-pick");
+        const badge = document.createElement("span");
+        badge.className = "pick-badge";
+        badge.textContent = "추천";
+        li.append(badge);
+      }
 
       const name = document.createElement("h2");
       name.textContent = item.name;
@@ -317,6 +367,8 @@
         }
 
         function applyFilter() {
+          // 조건이 바뀌면 이전 추천은 맞지 않으므로 지운다.
+          clearRecommendation();
           const maxPrice = readNumber("max-price");
           const minDiff = readNumber("min-difficulty");
           const matched = items
@@ -326,12 +378,96 @@
           showSortState(1); // 필터 결과는 항상 price 낮은 순
           empty.hidden = matched.length > 0;
           empty.textContent = matched.length > 0 ? "" : emptyMessage(maxPrice, minDiff);
+          return matched;
         }
 
         document.getElementById("apply").addEventListener("click", applyFilter);
         // 칸 값이 바뀌면 [적용] 을 누르지 않아도 바로 다시 거른다.
         document.getElementById("max-price").addEventListener("input", applyFilter);
         document.getElementById("min-difficulty").addEventListener("input", applyFilter);
+
+        // ---- AI 추천 ----
+        // 키는 브라우저에 없다. 조건만 /api/recommend (Vercel 서버 함수) 로 보내고,
+        // 서버가 data.json 으로 후보를 다시 만들어 Gemini 를 부른다.
+        const recommendBtn = document.getElementById("recommend-btn");
+        const recommendBox = document.getElementById("recommend-result");
+        const RECOMMEND_LABEL = recommendBtn.textContent;
+        let requestSeq = 0; // 기다리는 사이 조건이 바뀌면 늦게 온 답은 버린다.
+
+        // 서버와 같은 고정 순서: price 낮은 순 → difficulty 높은 순 → name 코드 순, 최대 5개
+        function topCandidates(matched) {
+          return matched.slice().sort((a, b) => Number(a.price) - Number(b.price)
+            || Number(b.difficulty) - Number(a.difficulty)
+            || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)).slice(0, 5);
+        }
+
+        function clearRecommendation() {
+          requestSeq++;
+          recommendBox.hidden = true;
+          recommendBox.replaceChildren();
+          if (recommendedName !== null) {
+            recommendedName = null;
+            render(current);
+          }
+        }
+
+        function showRecommendMessage(text) {
+          const p = document.createElement("p");
+          p.textContent = text;
+          recommendBox.replaceChildren(p);
+          recommendBox.hidden = false;
+        }
+
+        function showRecommendation(name, reasons) {
+          const title = document.createElement("p");
+          title.className = "pick-name";
+          title.textContent = "추천: " + name;
+          const lines = reasons.map((r) => {
+            const p = document.createElement("p");
+            p.textContent = r;
+            return p;
+          });
+          recommendBox.replaceChildren(title, ...lines);
+          recommendBox.hidden = false;
+          recommendedName = name;
+          render(current); // 추천 카드에 표시
+        }
+
+        recommendBtn.addEventListener("click", async () => {
+          const matched = applyFilter();
+          if (matched.length === 0) return; // 후보 0개: Gemini 를 부르지 않고 M10 안내만
+
+          const allowedNames = topCandidates(matched).map((it) => it.name);
+          const seq = ++requestSeq;
+          recommendBtn.disabled = true;
+          recommendBtn.textContent = "고르는 중…";
+          try {
+            const res = await fetch("/api/recommend", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                maxPrice: readNumber("max-price"),
+                minDifficulty: readNumber("min-difficulty"),
+              }),
+            });
+            const data = await res.json().catch(() => null);
+            if (seq !== requestSeq) return;
+
+            if (!res.ok || !data || data.reason === "ai_unavailable") {
+              showRecommendMessage("잠시 뒤 다시 눌러 주세요");
+            } else if (data.ok && allowedNames.includes(data.name)
+                       && Array.isArray(data.reasons) && data.reasons.length === 2) {
+              showRecommendation(data.name, data.reasons);
+            } else {
+              showRecommendMessage("추천을 확인하지 못했습니다");
+            }
+          } catch {
+            if (seq === requestSeq) showRecommendMessage("잠시 뒤 다시 눌러 주세요");
+          } finally {
+            recommendBtn.disabled = false;
+            recommendBtn.textContent = RECOMMEND_LABEL;
+          }
+        });
 
         render(current);
       })
