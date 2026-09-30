@@ -71,3 +71,45 @@ API 키는 Vercel 환경변수 `GEMINI_API_KEY`에 넣습니다. 키는 서버 �
 - 방도장은 추가 목록이 무한스크롤 방식이고 robots.txt에서 `/api/` 경로가 제한되어 있어, 공개 목록 페이지에서 확인 가능한 30행만 수집했습니다.
 - price와 difficulty가 비어 있는 2행을 제거해 28개를 분석했습니다.
 - Gemini 무료 API 한도에 따라 추천 호출이 실패할 수 있습니다. 이때는 「잠시 뒤 다시 눌러 주세요」가 표시됩니다.
+
+## 실행 안내
+
+명령은 모두 프로젝트 루트(`mini3-project`)에서 실행합니다. Windows는 `python ...`, Mac은 `python3 ...`로 실행합니다.
+
+### 1. 다시 모으기
+
+| 순서 | 파일 이름 | 무엇을 만드나 | 실행 명령 (Windows) | 확인 여부 |
+|---:|---|---|---|---|
+| 0 | `scripts/00_env_check.py` | 파일을 만들지 않음 — pandas · requests · beautifulsoup4 · matplotlib 설치와 버전 확인 | `python scripts/00_env_check.py` | 확인 안 함 |
+| 1 | `scripts/01_collect_p1.py` | `data/raw_p1.csv` (공개 목록 1페이지 수집) | `python scripts/01_collect_p1.py` | 확인 안 함 |
+| 2 | `scripts/02_collect.py` | `data/raw.csv` (원본 30행) | `python scripts/02_collect.py` | 확인 안 함 |
+| 3 | `scripts/03_clean.py` | `data/clean.csv` (정제 28행) | `python scripts/03_clean.py` | 확인함 |
+| 4 | `scripts/04_stats.py` | 파일을 만들지 않음 — price 기초 통계표를 터미널에 출력 | `python scripts/04_stats.py` | 확인 안 함 |
+| 5 | `scripts/05_hist.py` | `charts/hist.png` (가격 분포, 2,000원 구간) | `python scripts/05_hist.py` | 확인 안 함 |
+| 5 | `scripts/05_hist_half.py` | `charts/hist_half.png` (가격 분포, 1,000원 구간) | `python scripts/05_hist_half.py` | 확인 안 함 |
+| 6 | `scripts/06_by_category.py` | `charts/by_category.png` (난이도별 평균 가격) | `python scripts/06_by_category.py` | 확인 안 함 |
+| 6 | `scripts/06_by_category_median.py` | `charts/by_category_median.png` (난이도별 평균 · 중앙값) | `python scripts/06_by_category_median.py` | 확인 안 함 |
+| 7 | `scripts/07_export_json.py` | `data/data.json` (화면 · AI 추천용 28개) | `python scripts/07_export_json.py` | 확인 안 함 |
+
+> ⚠️ `01_collect_p1.py`, `02_collect.py`는 사이트에 요청을 보낸다 · 페이지 수를 늘리지 않는다.
+> 지금 있는 `data/raw.csv`로 다시 만들 때는 3번부터 실행합니다.
+
+확인함 — `python scripts/03_clean.py` 를 실행해 오류 없이 끝났고(종료 코드 0), 행 수 30 → 28 (빈칸 2행 제거 · detail_url 중복 0), `data/clean.csv` 28행 저장을 확인했습니다.
+
+### 2. 화면에 반영하기
+
+화면(`index.html`)은 `data/data.json`과 `charts/hist.png` · `charts/by_category.png`를 그대로 읽어 보여 줍니다. AI 추천 서버 함수(`api/recommend.js`)도 `data/data.json`으로 후보를 만듭니다.
+
+1. 위 순서로 `data/data.json`과 `charts/` 그림을 다시 만듭니다.
+2. 바뀐 파일을 커밋하고 GitHub 저장소(`ggazero/mini3-project`)의 `main` 브랜치에 push합니다.
+3. Vercel이 새로 배포하면 배포 주소 https://zero-escape-pick.vercel.app 에 반영됩니다.
+
+### 3. AI 연결
+
+AI 추천은 `api/recommend.js`(Vercel 서버 함수, `POST /api/recommend`)가 Gemini를 부르는 방식입니다. API 키는 이 서버 함수에서만 읽고, 화면에는 들어가지 않습니다.
+
+1. Vercel 프로젝트의 Settings → Environment Variables에 이름 `GEMINI_API_KEY`로 Gemini API 키를 넣습니다.
+2. Redeploy해야 새 환경변수가 적용됩니다.
+3. 키가 없거나 호출이 실패하면 화면에 「잠시 뒤 다시 눌러 주세요」가 표시됩니다.
+
+키 값은 README나 저장소 파일에 쓰지 않습니다. 로컬의 `.env` · `.env.local`은 `.gitignore`로 저장소에 올라가지 않습니다.
