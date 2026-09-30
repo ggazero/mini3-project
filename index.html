@@ -566,11 +566,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           recommendBox.hidden = false;
         }
 
+        // 추천 이유 첫 줄: 화면의 필터 결과 개수로 다른 후보와 비교하는 문장. (둘째 줄 가격 이유는 AI 문장 그대로)
+        // AI 는 필터 결과 중 가격 낮은 5개만 받으므로, 5개가 넘으면 그 범위를 밝힌다.
+        function compareReason() {
+          const minDiff = readNumber("min-difficulty");
+          if (minDiff === null) return "조건에 맞는 " + current.length + "개 후보 중 가격이 가장 낮습니다.";
+          const pool = current.length > 5
+            ? "조건에 맞는 " + current.length + "개 중 가격 낮은 5개 후보에서"
+            : "조건에 맞는 " + current.length + "개 후보 중";
+          return pool + " 최소 난이도 " + formatDifficulty(minDiff) + "에 가장 가깝습니다.";
+        }
+
         function showRecommendation(name, reasons) {
           const title = document.createElement("p");
           title.className = "pick-name";
           title.textContent = "추천: " + name;
-          const lines = reasons.map((r) => {
+          const lines = [compareReason(), reasons[1]].map((r) => {
             const p = document.createElement("p");
             p.textContent = r;
             return p;
