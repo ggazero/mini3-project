@@ -277,3 +277,15 @@ event-naming 스킬 확인 완료
 받은 발견 없음 · 스스로 고른 것 — 음수 예산 입력을 막도록 수정했고, 짝이 -5 조건에서 안내 문장 표시 및 필터·추천 미실행을 다시 확인함
 
 고친 것 · 다시 본 결과 : 받은 발견 없음 · 스스로 고른 것 — 예산이 0 이하이면 「예산은 0보다 커야 합니다」 안내를 보여 주고 필터·추천을 진행하지 않도록 수정했다. 배포본에서 -5 입력 시 안내 문장이 정상 표시됐고, 30000 / 3.5 조건에서는 후보 5개와 기존 추천 동작이 그대로 유지되는 것을 확인했다.
+
+## M17 이벤트 도착
+
+| 이벤트 | 미리보기 | DebugView | 누른 횟수 | 도착 횟수 |
+|---|---|---|---|---|
+| select_item | `GA4 select_item - 원래 화면 보기` 실행 확인 | 도착 · `item_list_name: ai_recommendation` · `item_name: 머니머니패키지` 확인 | 1 | 1 |
+| apply_filter | `GA4 apply_filter - 조건 적용` 실행 확인 · `max_price: 30000` · `min_difficulty: 3.5` | 도착 | 1 | 1 |
+| get_recommendation | `GA4 get_recommendation - 추천 결과` 실행 확인 · `result_status: success` | 도착 | 1 | 1 |
+
+DebugView 순서 : apply_filter → get_recommendation → select_item
+
+게시한 버전 : 미니3 apply_filter · get_recommendation 추가
