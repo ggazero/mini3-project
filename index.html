@@ -4,6 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>방탈출 테마 비교 도우미</title>
+
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KSLR9BSG');</script>
+<!-- End Google Tag Manager -->
+
   <style>
     :root {
       --bg: #ffffff;
@@ -296,6 +305,12 @@
   </style>
 </head>
 <body>
+
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KSLR9BSG"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+
   <main>
     <header class="page-head">
       <p class="eyebrow">방도장 공개 목록 기반</p>
@@ -396,6 +411,17 @@
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = "원래 화면 보기";
+      // 측정: 한 번 클릭에 select_item 한 번. 주소(detail_url)는 넣지 않는다.
+      link.addEventListener("click", () => {
+        dataLayer.push({ ecommerce: null });
+        dataLayer.push({
+          event: "select_item",
+          ecommerce: {
+            item_list_name: item.name === recommendedName ? "ai_recommendation" : "filtered_list",
+            items: [{ item_name: item.name, price: Number(item.price) }],
+          },
+        });
+      });
 
       li.append(name, price, difficulty, link);
       return li;
@@ -494,7 +520,16 @@
           return matched;
         }
 
-        document.getElementById("apply").addEventListener("click", applyFilter);
+        // 측정: apply_filter 는 [적용] 클릭으로 조건이 실제 적용됐을 때만 한 번 보낸다.
+        // (칸 입력 · 추천받기 안에서 도는 필터는 보내지 않는다)
+        document.getElementById("apply").addEventListener("click", () => {
+          if (applyFilter() === null) return;
+          dataLayer.push({
+            event: "apply_filter",
+            max_price: readNumber("max-price"),
+            min_difficulty: readNumber("min-difficulty"),
+          });
+        });
         // 칸 값이 바뀌면 [적용] 을 누르지 않아도 바로 다시 거른다.
         document.getElementById("max-price").addEventListener("input", applyFilter);
         document.getElementById("min-difficulty").addEventListener("input", applyFilter);
@@ -546,10 +581,18 @@
           render(current); // 추천 카드에 표시
         }
 
+        // 측정: 추천 결과나 실패 안내가 화면에 뜰 때 한 번. 추천 이름 · 이유 문장은 넣지 않는다.
+        function trackRecommendation(resultStatus) {
+          dataLayer.push({ event: "get_recommendation", result_status: resultStatus });
+        }
+
         recommendBtn.addEventListener("click", async () => {
           const matched = applyFilter();
           if (matched === null) return; // 예산 0 이하: 안내만 보여주고 Gemini 를 부르지 않음
-          if (matched.length === 0) return; // 후보 0개: Gemini 를 부르지 않고 M10 안내만
+          if (matched.length === 0) { // 후보 0개: Gemini 를 부르지 않고 M10 안내만
+            trackRecommendation("no_candidates");
+            return;
+          }
 
           const allowedNames = topCandidates(matched).map((it) => it.name);
           const seq = ++requestSeq;
@@ -569,14 +612,20 @@
 
             if (!res.ok || !data || data.reason === "ai_unavailable") {
               showRecommendMessage("잠시 뒤 다시 눌러 주세요");
+              trackRecommendation("error");
             } else if (data.ok && allowedNames.includes(data.name)
                        && Array.isArray(data.reasons) && data.reasons.length === 2) {
               showRecommendation(data.name, data.reasons);
+              trackRecommendation("success");
             } else {
               showRecommendMessage("추천을 확인하지 못했습니다");
+              trackRecommendation("unverified");
             }
           } catch {
-            if (seq === requestSeq) showRecommendMessage("잠시 뒤 다시 눌러 주세요");
+            if (seq === requestSeq) {
+              showRecommendMessage("잠시 뒤 다시 눌러 주세요");
+              trackRecommendation("error");
+            }
           } finally {
             recommendBtn.disabled = false;
             recommendBtn.textContent = RECOMMEND_LABEL;
